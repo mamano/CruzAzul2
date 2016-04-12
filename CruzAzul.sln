@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.24720.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CruzAzul", "CruzAzul\CruzAzul.csproj", "{2EF043D1-78CA-4172-8301-BFCA2EA01DAE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApplication1", "ConsoleApplication1\ConsoleApplication1.csproj", "{B4CB9646-C962-42F5-926C-6C9854DF2D0E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowsService2", "WindowsService2\WindowsService2.csproj", "{182C6A17-FE49-4A1E-BAB1-92F9B9C4E73C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2EF043D1-78CA-4172-8301-BFCA2EA01DAE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2EF043D1-78CA-4172-8301-BFCA2EA01DAE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2EF043D1-78CA-4172-8301-BFCA2EA01DAE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2EF043D1-78CA-4172-8301-BFCA2EA01DAE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B4CB9646-C962-42F5-926C-6C9854DF2D0E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B4CB9646-C962-42F5-926C-6C9854DF2D0E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B4CB9646-C962-42F5-926C-6C9854DF2D0E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B4CB9646-C962-42F5-926C-6C9854DF2D0E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{182C6A17-FE49-4A1E-BAB1-92F9B9C4E73C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{182C6A17-FE49-4A1E-BAB1-92F9B9C4E73C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{182C6A17-FE49-4A1E-BAB1-92F9B9C4E73C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{182C6A17-FE49-4A1E-BAB1-92F9B9C4E73C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
