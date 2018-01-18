@@ -1,13 +1,19 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.24720.0
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CruzAzul", "CruzAzul\CruzAzul.csproj", "{2EF043D1-78CA-4172-8301-BFCA2EA01DAE}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApplication1", "ConsoleApplication1\ConsoleApplication1.csproj", "{B4CB9646-C962-42F5-926C-6C9854DF2D0E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowsService2", "WindowsService2\WindowsService2.csproj", "{182C6A17-FE49-4A1E-BAB1-92F9B9C4E73C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CruzAzulWeb", "CruzAzulWeb\CruzAzulWeb.csproj", "{30AD6E9E-8026-43A4-B7D3-88AE908BE30A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApplication2", "ConsoleApplication2\ConsoleApplication2.csproj", "{53642AE2-D474-4307-A8C1-04CFDFD3674B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GuelfondProj", "GuelfondProj\GuelfondProj.csproj", "{117EE0C9-085F-45B6-8D24-ED24A8E0EB2D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +33,18 @@ Global
 		{182C6A17-FE49-4A1E-BAB1-92F9B9C4E73C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{182C6A17-FE49-4A1E-BAB1-92F9B9C4E73C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{182C6A17-FE49-4A1E-BAB1-92F9B9C4E73C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{30AD6E9E-8026-43A4-B7D3-88AE908BE30A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{30AD6E9E-8026-43A4-B7D3-88AE908BE30A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{30AD6E9E-8026-43A4-B7D3-88AE908BE30A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{30AD6E9E-8026-43A4-B7D3-88AE908BE30A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{53642AE2-D474-4307-A8C1-04CFDFD3674B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{53642AE2-D474-4307-A8C1-04CFDFD3674B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{53642AE2-D474-4307-A8C1-04CFDFD3674B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{53642AE2-D474-4307-A8C1-04CFDFD3674B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{117EE0C9-085F-45B6-8D24-ED24A8E0EB2D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{117EE0C9-085F-45B6-8D24-ED24A8E0EB2D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{117EE0C9-085F-45B6-8D24-ED24A8E0EB2D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{117EE0C9-085F-45B6-8D24-ED24A8E0EB2D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
