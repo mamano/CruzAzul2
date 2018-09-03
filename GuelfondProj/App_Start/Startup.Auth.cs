@@ -23,7 +23,7 @@ namespace GuelfondProj
     public partial class Startup
     {
 
-        
+        private static string error = string.Empty;
         // For more information on configuring authentication, please visit http://go.microsoft.com/fwlink/?LinkId=301864
         public void ConfigureAuth(IAppBuilder app)
         {
@@ -41,7 +41,7 @@ namespace GuelfondProj
             
 
                 RecurringJob.AddOrUpdate("run", () => Run(), "* * * * *");  
-                //RecurringJob.AddOrUpdate("delete", () => Delete(), "0 0 */10 * *");
+                RecurringJob.AddOrUpdate("delete", () => Delete(), "0 0 */10 * *");
 
 
                 app.UseHangfireDashboard();
@@ -58,7 +58,7 @@ namespace GuelfondProj
 
                 using (OracleConnection connection = new OracleConnection(conn))
                 {
-                    OracleCommand command = new OracleCommand("SELECT * FROM MOVEPDF WHERE STATUS = 1", connection);
+                    OracleCommand command = new OracleCommand("SELECT * FROM MOVEPDF WHERE STATUS = 1 AND ROWNUM < 10", connection);
                     connection.Open();
                     connection.BeginTransaction();
 
@@ -79,14 +79,15 @@ namespace GuelfondProj
                                 /*FileInfo f1 = new FileInfo(sourceFilePath);
                                 f1.Delete();
                                 Directory.Delete(sourcePath + "\\" + dr["PATHNAME"].ToString());*/
-                                command = new OracleCommand("DELETE FROM MOVEPDF WHERE STATUS = 1", connection);
+                                command = new OracleCommand("DELETE FROM MOVEPDF WHERE STUDY_KEY = '{STUDY_KEY}'", connection);
                                 command.ExecuteNonQuery();
                                 command.Transaction.Commit();
                             }
                             catch (Exception ex)
                             {
                                 command.Transaction.Rollback();
-                                error += ex.Message + "\r\n" + ex.InnerException + "\r\n" + ex.Source + "\r\n" + ex.StackTrace + "\r\n";
+                                connection.Close();
+                                throw new Exception($" error: {ex}");
                             }
                             finally
                             {
@@ -96,7 +97,7 @@ namespace GuelfondProj
                     }
                     catch (Exception ex)
                     {
-                        error += ex.Message + "\r\n" + ex.InnerException + "\r\n" + ex.Source + "\r\n" + ex.StackTrace + "\r\n";
+                        throw ex;
                     }
                     finally
                     {
@@ -106,7 +107,7 @@ namespace GuelfondProj
             }
             catch (Exception ex)
             {
-                error += ex.Message + "\r\n" + ex.InnerException + "\r\n" + ex.Source + "\r\n" + ex.StackTrace + "\r\n";
+                throw ex;
             }
 
             return error;
@@ -114,8 +115,8 @@ namespace GuelfondProj
 
         public string Run()
         {
-            var error = string.Empty;
-
+            error = string.Empty;
+            var STUDY_KEY = string.Empty;
             try
             {
 
@@ -123,9 +124,9 @@ namespace GuelfondProj
                 
                 using (OracleConnection connection = new OracleConnection(conn))
                 {
-                   OracleCommand command = new OracleCommand(@"SELECT report.*, study.PATIENT_NAME, study.CREATION_DTTM  FROM MOVEREPORT report
+                   OracleCommand command = new OracleCommand(@"SELECT report.*, study.PATIENT_NAME, TO_CHAR(study.CREATION_DTTM, 'YYYY-MM-DD hh24:mi:ss')  CREATION_DTTM  FROM MOVEREPORT report
                                                                 inner join study
-                                                                on report.study_key = study.study_key WHERE STATUS = 0", connection);
+                                                                on report.study_key = study.study_key WHERE STATUS = 0 and ROWNUM < 10", connection);
                     connection.Open();
                     connection.BeginTransaction();
 
@@ -145,42 +146,39 @@ namespace GuelfondProj
                             OracleClob clob = reader.GetOracleClob(2);
                             var cellValue = (string)clob.Value;
                             
-                            try
-                            {
-                                var ACCESSNUMBER = reader["ACCESSNUMBER"].ToString();
-                                var STUDY_KEY = reader["STUDY_KEY"].ToString();
-                                var report = reader["REPORT_TEXT_LOB"].ToString().Replace("====== [Conclusion] ======", "");
-                                var patient_name = reader["PATIENT_NAME"].ToString();
-                                var creation_data = reader["CREATION_DTTM"].ToString();
-                                var CRM = reader["CRM"].ToString();
-                                CRM = Regex.Match(CRM, @"\d+").Value;
 
-                                RunAsync(ACCESSNUMBER, STUDY_KEY, report, patient_name, creation_data, command, connection, CRM).Wait();
-                                //====== [Conclusion] ======
+                            var ACCESSNUMBER = reader["ACCESSNUMBER"].ToString();
+                            STUDY_KEY = reader["STUDY_KEY"].ToString();
+                            var report = reader["REPORT_TEXT_LOB"].ToString().Replace("====== [Conclusion] ======", "");
+                            var patient_name = reader["PATIENT_NAME"].ToString();
+                            var creation_data = reader["CREATION_DTTM"].ToString().Replace(" ", "T");
+                            var CRM = reader["CRM"].ToString();
+                            var regex = new Regex(@"[^\d]");
+                            CRM = regex.Replace(CRM, "");
 
-                                
-                            }
-                            catch(Exception ex)
-                            {
-                                command.Transaction.Rollback();
-                                error += ex.Message + "\r\n" + ex.InnerException + "\r\n" + ex.Source + "\r\n" + ex.StackTrace;
-                            }
+                            RunAsync(ACCESSNUMBER, STUDY_KEY, report, patient_name, creation_data, command, connection, CRM).Wait();
+                            //====== [Conclusion] ======
+
+ 
                         }
                     }
                     catch(Exception ex)
                     {
                         command.Transaction.Rollback();
-                        error += ex.Message + "\r\n" + ex.InnerException + "\r\n" + ex.Source + "\r\n" + ex.StackTrace + "\r\n";
+                        var teste = $" error {{ studykey: {STUDY_KEY}, ex: {ex} }}";
+                        command = new OracleCommand($"UPDATE MOVEREPORT SET STATUS = 1, ERROR = '{teste}' WHERE STUDY_KEY = '{STUDY_KEY}'", connection);
+                        command.ExecuteNonQuery();
                     }
                     finally
                     {
+                        command.Transaction.Commit();
                         connection.Close();
                     }
                 }
             }
             catch (Exception ex)
             {
-                error += ex.Message + "\r\n" + ex.InnerException + "\r\n" + ex.Source + "\r\n" + ex.StackTrace + "\r\n";
+                return error;
             }
 
             return error;
@@ -188,106 +186,129 @@ namespace GuelfondProj
 
         static async Task RunAsync(string ACCESSNUMBER, string STUDY_KEY, string report, string patient_name, string creation_data, OracleCommand command, OracleConnection connection, string CRM)
         {
-            HttpClient client = new HttpClient();
-            client.BaseAddress = new Uri("http://172.17.100.30:9090/");
+            var client = new HttpClient();
+            var host = ConfigurationManager.AppSettings["host"];
+            var token = "username=tor&password=tor@1234&grant_type=password";
+            client.BaseAddress = new Uri(host);
             client.DefaultRequestHeaders.Accept.Clear();
-            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            var teste = "";
+            error += $"Start: {STUDY_KEY} \r\n";
+            var teste = default(string);
             try
             {
-                Token token = new Token {
+                /*Token token = new Token {
                                 UserName = "des",
                                 Password = "benner",
                                 Operations = new string[] { "CadastraLaudo" }
-                };
-                teste = JsonConvert.SerializeObject(token);
+                };*/
+                //teste = JsonConvert.SerializeObject(token);
                 var tk = await GetTokenAsync(client, token);
-                teste = tk + "\r\n" + ACCESSNUMBER + "\r\n" + CRM;
-                var chv = ACCESSNUMBER.Substring(ACCESSNUMBER.Length - 2);
-                var os = ACCESSNUMBER.Substring(0, ACCESSNUMBER.Length - 2);
-                teste = chv + "\r\n" + CRM + "\r\n" + os;
-                Laudos laudo = new Laudos {
-                                    Id = Convert.ToInt32(chv),
+                error += $" token: {JsonConvert.SerializeObject(tk)} \r\n";
+                teste += $" token: {JsonConvert.SerializeObject(tk)} \r\n";
+                var chv = string.Empty;
+                var os = string.Empty;
+                if (ACCESSNUMBER.Length >= 10)
+                {
+                    chv = ACCESSNUMBER.Substring(ACCESSNUMBER.Length - 2);
+                    os = ACCESSNUMBER.Substring(0, ACCESSNUMBER.Length - 2);
+                }
+                else
+                {
+                    chv = ACCESSNUMBER;
+                }
+
+                client.DefaultRequestHeaders.Accept.Clear();
+                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tk.access_token);
+
+                var laudo = new Laudos {
+                                    Id = !string.IsNullOrEmpty(chv) ? Convert.ToInt32(chv) : 0,
                                     Laudo = report,
-                                    Crm = Convert.ToInt32(CRM),
-                                    DtRealizacao = creation_data
+                                    Crm = CRM ?? "0"
                 };
 
                 
 
                 // Create a new product
-                CadastraLaudo cadastroLaudo = new CadastraLaudo { Laudos = new object[] { laudo },
+                var cadastroLaudo = new CadastraLaudo { Laudos = new object[] { laudo },
                                                                   NomePaciente = patient_name,
-                                                                  Os = Convert.ToInt64(os),
-                                                                  Token = tk,
-                                                                  UserName = "des"
+                                                                  Os = !string.IsNullOrEmpty(os) ? Convert.ToInt64(os) : 0
                 };
-                teste = JsonConvert.SerializeObject(cadastroLaudo);
+                error += $"laudo:  {JsonConvert.SerializeObject(cadastroLaudo)} \r\n";
+                teste += $"laudo:  {JsonConvert.SerializeObject(cadastroLaudo)} \r\n";
                 var ret = await SendLaudoAsync(client, cadastroLaudo);
-
-                command = new OracleCommand("UPDATE MOVEREPORT SET STATUS = 1, ERROR = '" + ret + "' WHERE STUDY_KEY = '" + STUDY_KEY + "'", connection);
+                error += $"retorno laudo: {JsonConvert.SerializeObject(ret)}";
+                teste += $"retorno laudo: {JsonConvert.SerializeObject(ret)}";
+                command = new OracleCommand($"UPDATE MOVEREPORT SET STATUS = 1, ERROR = '{teste}' WHERE STUDY_KEY = '{STUDY_KEY}'", connection);
                 command.ExecuteNonQuery();
-                command.Transaction.Commit();
+                //command.Transaction.Commit();
 
+                /*if(ret.Descricao.Contains("Requisição não encontrada"))
+                {
+                    command = new OracleCommand($"UPDATE STUDY SET STUDY_COMMENTS = '{teste}' WHERE STUDY_KEY = '{STUDY_KEY}'", connection);
+                    command.ExecuteNonQuery();
+                    //command.Transaction.Commit();
+                }*/
             }
             catch (Exception e)
             {
-                throw new Exception(teste + "\r\n" + e.Message + "\r\n" +  e.InnerException + "\r\n" + e.StackTrace);
+                teste = $" laudo: {teste} exception: {e} \r\n ";
+                
+                command = new OracleCommand($"UPDATE MOVEREPORT SET STATUS = 1, ERROR = '{teste}' WHERE STUDY_KEY = '{STUDY_KEY}'", connection);
+                command.ExecuteNonQuery();
             }
-            
+            error += "End \r\n";
         }
 
-        static async Task<string> SendLaudoAsync(HttpClient client, CadastraLaudo cadastraLaudo)
+        static async Task<ResultCadastroLaudo> SendLaudoAsync(HttpClient client, CadastraLaudo cadastraLaudo)
         {
-            StringContent content = new StringContent(JsonConvert.SerializeObject(cadastraLaudo), Encoding.UTF8, "application/json");
-            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
-            HttpResponseMessage response = await client.PostAsync("API/Laudo/CadastraLaudo", content);
-            response.EnsureSuccessStatusCode();
-            string msg;
+            var content = new StringContent(JsonConvert.SerializeObject(cadastraLaudo), Encoding.UTF8, "application/json");
+            var response = await client.PostAsync("webapi/api/integracoes/laudo/cadastrarLaudo", content);
+            var result = new ResultCadastroLaudo();
+            result.Descricao = $"resposta: {response.ReasonPhrase} - {((int)response.StatusCode).ToString()} \r\n";
+            
             if (response.IsSuccessStatusCode)
             {
-                msg = await response.Content.ReadAsStringAsync();
-            }
-            else
-            {
-                msg = response.StatusCode.ToString();
+                var data = await response.Content.ReadAsStringAsync();
+                result = JsonConvert.DeserializeObject<ResultCadastroLaudo>(data);
             }
             // return URI of the created resource.
-            return msg;
+            return result;
         }
 
-        static async Task<string> GetTokenAsync(HttpClient client, Token token)
+        static async Task<Token> GetTokenAsync(HttpClient client, string token)
         {
 
-            StringContent content = new StringContent(JsonConvert.SerializeObject(token), Encoding.UTF8, "application/json");
+            //StringContent content = new StringContent(JsonConvert.SerializeObject(token), Encoding.UTF8, "application/json");
+            var  content = new StringContent(token, Encoding.UTF8, "text/plain");
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
+            var response = await client.PostAsync("webapi/token", content);
+            var result = new Token();
+            result.token_type = $"resposta: {response.ReasonPhrase} - {((int)response.StatusCode).ToString()} \r\n";
             
-            HttpResponseMessage response = await client.PostAsync("api/Laudo/GetHash", content);
-            string msg;
             if (response.IsSuccessStatusCode)
             {
-                var data = (Newtonsoft.Json.Linq.JArray)await response.Content.ReadAsAsync<object>();
-                var teste = data.ToObject<string[]>();
-                msg = teste[0];
+                //var data = (Newtonsoft.Json.Linq.JArray)await response.Content.ReadAsAsync<object>();
+                //var teste = data.ToObject<string[]>();
+                //msg = teste[0];
+                var data = await response.Content.ReadAsStringAsync();
+                result = JsonConvert.DeserializeObject<Token>(data);
+
             }
-            else
-            {
-                msg = response.StatusCode.ToString();
-            }
-            return msg;
+            return result;
         }
     }
     [Serializable]
     public class Token
     {
-        public string UserName { get; set; }
-        public string Password { get; set; }
-        public string[] Operations { get; set; }
+        public string access_token { get; set; }
+        public string token_type { get; set; }
+        public int expires_in { get; set; }
     }
+
     [Serializable]
     public class CadastraLaudo
     {
-        public string UserName { get; set; }
-        public string Token { get; set; }
         public long Os { get; set; }
         public string NomePaciente { get; set; }
         public object[] Laudos { get; set; }
@@ -297,7 +318,15 @@ namespace GuelfondProj
     {
         public int Id { get; set; }
         public string Laudo { get; set; }
-        public int Crm { get; set; }
-        public string DtRealizacao { get; set; }
+        public string Crm { get; set; }
+    }
+    [Serializable]
+    public class ResultCadastroLaudo
+    {
+        public string Dados { get; set; }
+        public int Codigo { get; set; }
+        public string Descricao { get; set; }
+        public int StatusRetorno { get; set; }
+        public string[] Mensagens { get; set; }
     }
 }

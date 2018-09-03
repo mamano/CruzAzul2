@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.27703.2026
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CruzAzul", "CruzAzul\CruzAzul.csproj", "{2EF043D1-78CA-4172-8301-BFCA2EA01DAE}"
 EndProject
@@ -14,6 +14,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApplication2", "ConsoleApplication2\ConsoleApplication2.csproj", "{53642AE2-D474-4307-A8C1-04CFDFD3674B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GuelfondProj", "GuelfondProj\GuelfondProj.csproj", "{117EE0C9-085F-45B6-8D24-ED24A8E0EB2D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp2", "ConsoleApp2\ConsoleApp2.csproj", "{C3779E36-5E81-469A-AB29-882CA1136DC5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,8 +47,15 @@ Global
 		{117EE0C9-085F-45B6-8D24-ED24A8E0EB2D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{117EE0C9-085F-45B6-8D24-ED24A8E0EB2D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{117EE0C9-085F-45B6-8D24-ED24A8E0EB2D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C3779E36-5E81-469A-AB29-882CA1136DC5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C3779E36-5E81-469A-AB29-882CA1136DC5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C3779E36-5E81-469A-AB29-882CA1136DC5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C3779E36-5E81-469A-AB29-882CA1136DC5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {250B092D-A583-40C0-BDBF-95347580F64C}
 	EndGlobalSection
 EndGlobal
