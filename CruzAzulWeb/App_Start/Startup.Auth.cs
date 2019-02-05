@@ -55,60 +55,67 @@ namespace CruzAzulWeb
             try
             {
                 string conn = ConfigurationManager.ConnectionStrings["DefaultConnection"].ConnectionString;
-
-                using (OracleConnection connection = new OracleConnection(conn))
+                var ds = new DataSet();
+                using (var connection = new OracleConnection(conn))
                 {
-                    
-                    OracleCommand command = new OracleCommand("SELECT * FROM MOVEPDF WHERE STATUS = 1 AND (DELETEFILE = 0 OR  DELETEFILE IS NULL) AND ROWNUM < 100", connection);
+
+                    var command = new OracleCommand("SELECT * FROM MOVEPDF WHERE STATUS = 1 AND (DELETEFILE = 0 OR  DELETEFILE IS NULL) AND ROWNUM < 100", connection);
                     connection.Open();
                     connection.BeginTransaction();
+                    var da = new OracleDataAdapter(command);
+                    var cb = new OracleCommandBuilder(da);
 
-                    try
+                    da.Fill(ds);
+                    connection.Close();
+                }
+                try
+                {
+                    var sourcePath = ConfigurationManager.AppSettings["SourcePathPDF"];
+                    foreach (DataRow dr in ds.Tables[0].Rows)
                     {
-                        var da = new OracleDataAdapter(command);
-                        var cb = new OracleCommandBuilder(da);
-                        var ds = new DataSet();
-                        da.Fill(ds);
 
-                        var sourcePath = ConfigurationManager.AppSettings["SourcePathPDF"];
-                        foreach (DataRow dr in ds.Tables[0].Rows)
+                        var sourceFilePath = sourcePath + "\\" + dr["PATHNAME"].ToString() + "\\" + dr["FILENAME"].ToString();
+                        try
                         {
+                            FileInfo f1 = new FileInfo(sourceFilePath);
+                            if(f1.Exists)
+                            {
+                                f1.Delete();
+                            }
+                            using (var connection = new OracleConnection(conn))
+                            {
+                                var command = new OracleCommand($"UPDATE MOVEPDF SET DELETEFILE = 1 WHERE GENERAL_FILE_KEY = '{dr["GENERAL_FILE_KEY"].ToString()}'", connection);
 
-                            var sourceFilePath = sourcePath + "\\" + dr["PATHNAME"].ToString() + "\\" + dr["FILENAME"].ToString();
-                            try
-                            {
-                                FileInfo f1 = new FileInfo(sourceFilePath);
-                                if(f1.Exists)
+                                try
                                 {
-                                    f1.Delete();
+                                    connection.Open();
+                                    connection.BeginTransaction();
+                                    command.ExecuteNonQuery();
+                                    command.Transaction.Commit();
+
                                 }
-                               
-                                command = new OracleCommand($"UPDATE MOVEPDF SET DELETEFILE = 1 WHERE GENERAL_FILE_KEY = '{dr["GENERAL_FILE_KEY"].ToString()}'", connection);
-                                command.ExecuteNonQuery();
-                                
+                                catch (Exception ex)
+                                {
+                                    command.Transaction.Rollback();
+                                    error += $" error update report: {ex}";
+                                }
+                                finally
+                                {
+                                    connection.Close();
+                                }
                             }
-                            catch (Exception ex)
-                            {
-                                error += $"error: {ex} - {dr}\r\n";
-                                command.Transaction.Rollback();
                                 
-                            }
-                            /*finally
-                            {
-                                connection.Close();
-                            }*/
+                        }
+                        catch (Exception ex)
+                        {
+                            error += $"error: {ex} - {dr}\r\n";
+                           
                         }
                     }
-                    catch (Exception ex)
-                    {
-                        error += $"error: {ex}";
-                        command.Transaction.Rollback();
-                    }
-                    finally
-                    {
-                        command.Transaction.Commit();
-                        connection.Close();
-                    }
+                }
+                catch (Exception ex)
+                {
+                    error += $"error: {ex}";  
                 }
             }
             catch (Exception ex)
@@ -171,7 +178,7 @@ namespace CruzAzulWeb
                     catch (Exception ex)
                     {
                         command.Transaction.Rollback();
-                        error += ex.Message + "\r\n" + ex.InnerException + "\r\n" + ex.Source + "\r\n" + ex.StackTrace + "\r\n";
+                        error += ex.Message + "\n" + ex.InnerException + "\n" + ex.Source + "\n" + ex.StackTrace + "\n";
                     }
                     finally
                     {
@@ -181,7 +188,7 @@ namespace CruzAzulWeb
             }
             catch (Exception ex)
             {
-                error += ex.Message + "\r\n" + ex.InnerException + "\r\n" + ex.Source + "\r\n" + ex.StackTrace + "\r\n";
+                error += ex.Message + "\n" + ex.InnerException + "\n" + ex.Source + "\n" + ex.StackTrace + "\n";
             }
 
             return error;
@@ -189,7 +196,7 @@ namespace CruzAzulWeb
 
         [Queue("run")]
         [DisableConcurrentExecution(timeoutInSeconds: 60)]
-        public void Run()
+        public string Run()
         {
             var error = string.Empty;
 
@@ -197,10 +204,10 @@ namespace CruzAzulWeb
             {
 
                 string conn = ConfigurationManager.ConnectionStrings["DefaultConnection"].ConnectionString;
-                
+                var ds = new DataSet();
                 using (OracleConnection connection = new OracleConnection(conn))
                 {
-                   OracleCommand command = new OracleCommand(@"SELECT 
+                    var command = new OracleCommand(@"SELECT 
                                                                 PDF.STATUS AS STATUS, 
                                                                 PDF.STUDY_INSTANCE_UID AS STUDY_INSTANCE_UID,
                                                                 PDF.PATHNAME AS PATHNAME,
@@ -218,86 +225,74 @@ namespace CruzAzulWeb
                     connection.Open();
                     connection.BeginTransaction();
 
-                    try
-                    {
-                        var da = new OracleDataAdapter(command);
-                        var cb = new OracleCommandBuilder(da);
-                        var ds = new DataSet();
-                        da.Fill(ds);
+
+                    var da = new OracleDataAdapter(command);
+                    var cb = new OracleCommandBuilder(da);
+
+                    da.Fill(ds);
+                    connection.Close();
+                }
+                try
+                {
+                    var sourcePath = ConfigurationManager.AppSettings["SourcePathPDF"];
+                    var destPath = ConfigurationManager.AppSettings["DestPathPDF"];
+                    var destPath2 = ConfigurationManager.AppSettings["DestPathPDF2"];
                         
+                    var MODALITIES = string.Empty;
+                    var STUDY_DESC = string.Empty;
+                    foreach (DataRow dr in ds.Tables[0].Rows)
+                    {
 
-                        var sourcePath = ConfigurationManager.AppSettings["SourcePathPDF"];
-                        var destPath = ConfigurationManager.AppSettings["DestPathPDF"];
-                        var destPath2 = ConfigurationManager.AppSettings["DestPathPDF2"];
-                        var MODALITIES = string.Empty;
-                        var STUDY_DESC = string.Empty;
-                        foreach (DataRow dr in ds.Tables[0].Rows)
+                        var filename = dr["FILENAME"].ToString();
+                        var pathName = dr["PATHNAME"].ToString();
+                        var accessnumber = dr["ACCESSNUMBER"].ToString();
+                        var study_uid = dr["STUDY_INSTANCE_UID"].ToString();
+                        var sourceFilePath = $"{sourcePath}\\{pathName}\\{filename}";
+                        var destFilePath2 = $"{destPath2}\\{accessnumber}.pdf";
+                        try
                         {
-                            //var regex = new Regex(@"[^\d]");
-                            //var accessnumber = regex.Replace(dr["ACCESSNUMBER"].ToString(), "");
-                            var accessnumber = dr["ACCESSNUMBER"].ToString();
-                            MODALITIES = dr["MODALITIES"].ToString();
-                            STUDY_DESC = dr["STUDY_DESC"].ToString();
-                            var regex = new Regex(@"(\s)");
-                            STUDY_DESC = regex.Replace(STUDY_DESC, "_");
-                            regex = new Regex(@"[!@#$%^&*.:,;<>\/|=+-´{}]");
-                            STUDY_DESC = regex.Replace(STUDY_DESC, "");
-                            var sourceFilePath = $"{sourcePath}\\{dr["PATHNAME"].ToString()}\\{dr["FILENAME"].ToString()}";
-                            //var destFilePath = $"{destPath}\\{accessnumber}{MODALITIES}{STUDY_DESC}.pdf";
-                            //var destFilePath2 = $"{destPath2}\\{accessnumber}{MODALITIES}{STUDY_DESC}.pdf";
-                            var destFilePath = $"{destPath}\\{accessnumber}.pdf";
-                            var destFilePath2 = $"{destPath2}\\{accessnumber}.pdf";
-                            try
+                            FileInfo f1 = new FileInfo(sourceFilePath);
+                            f1.CopyTo(destFilePath2, true);
+                            using (var connection = new OracleConnection(conn))
                             {
-                                
-                                /*PdfDocument pdf = new PdfDocument();
-                                pdf.LoadFromFile(sourceFilePath);
-                                string output = destPath + "\\" + dr["ACCESSNUMBER"].ToString() + ".doc";
-                                pdf.SaveToFile(output, FileFormat.DOC);
-                                System.Diagnostics.Process.Start(output);*/
+                                var command = new OracleCommand($"UPDATE MOVEPDF SET STATUS = 1 WHERE STUDY_INSTANCE_UID = '{study_uid}'", connection);
+                                try
+                                {   
+                                    connection.Open();
+                                    connection.BeginTransaction();
+                                    command.ExecuteNonQuery();
+                                    command.Transaction.Commit();
+                                    
+                                }
+                                catch(Exception ex)
+                                {
+                                    command.Transaction.Rollback();
+                                    error += $" error update report: {ex}";
+                                }
+                                finally
+                                {
+                                    connection.Close();
+                                }
 
-                                FileInfo f1 = new FileInfo(sourceFilePath);
-                                f1.CopyTo(destFilePath, true);
-                                
-                                //f1 = new FileInfo(destFilePath);
-                                f1.CopyTo(destFilePath2, true);
-
-                                //f1 = new FileInfo(sourceFilePath);
-                                //f1.Delete();
-
-                                command = new OracleCommand("UPDATE MOVEPDF SET STATUS = 1 WHERE STUDY_INSTANCE_UID = '" + dr["STUDY_INSTANCE_UID"] + "'", connection);
-                                command.ExecuteNonQuery();
-                                command.Transaction.Commit();
-
-                                error += $", study_uid: {dr["STUDY_INSTANCE_UID"]}, patientID: {dr["ACCESSNUMBER"]}";
                             }
-                            catch(Exception ex)
-                            {
-                                command.Transaction.Rollback();
-                                error += $" error:{ex} \r\n origem: { sourceFilePath} \r\n  destino: {destFilePath}";
-                            }
+                            error += $" study_uid: {study_uid}, patientID: {accessnumber}";
+                        }
+                        catch(Exception ex)
+                        {
+                            error += $" error:{ex} \n origem: {sourceFilePath} \n  destino: {destFilePath2}";
                         }
                     }
-                    catch(Exception ex)
-                    {
-                        command.Transaction.Rollback();
-                        error += $" error:{ex} ";
-                    }
-                    finally
-                    {
-                        connection.Close();
-                        if(error.Contains("error:"))
-                        {
-                            throw new Exception(error);
-                        }
-                    }
+                }
+                catch (Exception ex)
+                {
+                    error += $" error:{ex} ";
                 }
             }
             catch (Exception ex)
             {
-                throw ex;
+                error += $" error:{ex} ";
             }
-            
+            return error;
         }
     }
 }

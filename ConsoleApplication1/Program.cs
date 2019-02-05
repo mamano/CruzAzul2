@@ -1,17 +1,8 @@
 ﻿using System;
 using System.IO;
-using System.Threading;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Diagnostics;
-using System.Linq;
 using System.Text;
-
 using System.Xml;
-using System.Xml.Linq;
-using System.Configuration;
-using System.Data.OleDb;
 using Oracle.ManagedDataAccess.Client;
 
 

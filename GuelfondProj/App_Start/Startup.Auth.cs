@@ -222,7 +222,7 @@ namespace GuelfondProj
 
                 var laudo = new Laudos {
                                     Id = !string.IsNullOrEmpty(chv) ? Convert.ToInt32(chv) : 0,
-                                    Laudo = report,
+                                    Laudo = @"{\\\\rtf1\\\\fbidis\\\\ansi\\\\ansicpg1252\\\\deff0\\\\deflang1046{\\\\fonttbl{\\\\f0\\\\froman\\\\fprq2\\\\fcharset0 LUCIDA CONSOLE;}{\\\\f1\\\\fnil\\\\fcharset0 LUCIDA CONSOLE;}{\\\\f2\\\\fnil\\\\fcharset178 Courier New;}}  {\\\\stylesheet{ Normal;}{\\\\s1 heading 1;}}  \\\\viewkind4\\\\uc1\\\\pard\\\\ltrpar\\\\keepn\\\\s1\\\\b\\\\f0\\\\fs23  " + report.Replace("\r\n", " \\\\par ") + " \\\\par   \\\\par \\\\b   \\\\par }",
                                     Crm = CRM ?? "0"
                 };
 
