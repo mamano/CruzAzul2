@@ -54,7 +54,8 @@ namespace ConsoleApp2
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", result.access_token);
-                var report = @"TOMOGRAFIA COMPUTADORIZADA DO CRÂNIO
+                var report = @" 
+TOMOGRAFIA COMPUTADORIZADA DO CRÂNIO
 
 COMENTÁRIOS: Exame realizado em aparelho de tomografia computadorizada multidetector, com aquisição de imagens através de sequências volumétricas sem a administração endovenosa do contraste não iônico.
 
@@ -80,11 +81,11 @@ Sem sinais de fraturas detectáveis
 
 OPINIÃO:
 Achados sugestivos de leucoaraiose/ microangiopatia
-Redução volumétrica encefálica difusa";
-                 report = string.Format(@"{{\rtf1\fbidis\ansi\ansicpg1252\deff0\deflang1046{{\fonttbl{{\f0\froman\fprq2\fcharset0 LUCIDA CONSOLE;}}{{\f1\fnil\fcharset0 LUCIDA CONSOLE;}}{{\f2\fnil\fcharset178 Courier New;}}}  {{\stylesheet{{ Normal;}}{{\s1 heading 1;}}  \viewkind4\uc1\pard\ltrpar\keepn\s1\b\f0\fs23 {0} \par \par \b \par }}", report.Replace("\r\n", @" \par "));
+Redução volumétrica encefálica difusa ";
+                 report = string.Format(@" {0} ", report.Replace("\r\n", @" \par "));
                 var laudo = new Laudos
                 {
-                    Id = 26,
+                    Id = 45,
                     Laudo = report,
                     Crm = "43485"
                 };
@@ -95,7 +96,7 @@ Redução volumétrica encefálica difusa";
                     {
                         Laudos = new object[] { laudo },
                         NomePaciente = "Paciente Benner",
-                        Os = 21794023
+                        Os = 21789465
                 };
 
                     var teste = JsonConvert.SerializeObject(cadastroLaudo);
@@ -138,7 +139,7 @@ Redução volumétrica encefálica difusa";
         {
             //StringContent content = new StringContent(JsonConvert.SerializeObject(token), Encoding.UTF8, "application/json");
             var content = new StringContent(token, Encoding.UTF8, "text/plain");
-            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            //client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
             var response = await client.PostAsync("webapi/token", content);
             var result = new Token();
