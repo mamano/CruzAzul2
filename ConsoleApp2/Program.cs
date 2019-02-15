@@ -82,7 +82,10 @@ Sem sinais de fraturas detectáveis
 OPINIÃO:
 Achados sugestivos de leucoaraiose/ microangiopatia
 Redução volumétrica encefálica difusa ";
-                 report = string.Format(@" {0} ", report.Replace("\r\n", @" \par "));
+                 report = string.Format(@"{{\rtf1\fbidis\ansi\ansicpg1252\deff0\deflang1046{{\fonttbl{{\f0\froman\fprq2\fcharset0 LUCIDA CONSOLE;}}{{\f1\fnil\fcharset0 LUCIDA CONSOLE;}}{{\f2\fnil\fcharset178 Courier New;}}}  {{\stylesheet{{ Normal;}}{{\s1 heading 1;}}  \viewkind4\uc1\pard\ltrpar\keepn\s1\b\f0\fs23 
+			{0}
+
+			\par \par \b \par }}", report.Replace("\r\n", @" \par "));
                 var laudo = new Laudos
                 {
                     Id = 45,
