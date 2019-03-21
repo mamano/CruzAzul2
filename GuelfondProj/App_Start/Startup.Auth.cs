@@ -58,7 +58,7 @@ namespace GuelfondProj
 
                 using (OracleConnection connection = new OracleConnection(conn))
                 {
-                    OracleCommand command = new OracleCommand("SELECT * FROM MOVEPDF WHERE STATUS = 1 AND ROWNUM < 10", connection);
+                    OracleCommand command = new OracleCommand("SELECT * FROM MOVEREPORT WHERE STATUS = 1 AND ROWNUM < 10", connection);
                     connection.Open();
                     connection.BeginTransaction();
 
@@ -79,7 +79,7 @@ namespace GuelfondProj
                                 /*FileInfo f1 = new FileInfo(sourceFilePath);
                                 f1.Delete();
                                 Directory.Delete(sourcePath + "\\" + dr["PATHNAME"].ToString());*/
-                                command = new OracleCommand("DELETE FROM MOVEPDF WHERE STUDY_KEY = '{STUDY_KEY}'", connection);
+                                command = new OracleCommand("DELETE FROM MOVEREPORT WHERE STUDY_KEY = '{STUDY_KEY}'", connection);
                                 command.ExecuteNonQuery();
                                 command.Transaction.Commit();
                             }
@@ -219,13 +219,10 @@ namespace GuelfondProj
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tk.access_token);
-                var format = @"{\rtf1\fbidis\ansi\ansicpg1252\deff0\deflang1046{\fonttbl{\f0\froman\fprq2\fcharset0 LUCIDA CONSOLE;}{\f1\fnil\fcharset0 LUCIDA CONSOLE;}{\f2\fnil\fcharset178 Courier New;}}  {\stylesheet{ Normal;}{\s1 heading 1;}}  \viewkind4\uc1\pard\ltrpar\keepn\s1\b\f0\fs23 
-{0} 
-\par \par \b \par }";
-                format = string.Format(format, report.Replace("\r\n", @" \par "));
+                
                 var laudo = new Laudos {
                                     Id = !string.IsNullOrEmpty(chv) ? Convert.ToInt32(chv) : 0,
-                                    Laudo = format,
+                                    Laudo = PlainTextToRtf(report),
                                     Crm = CRM ?? V
                 };
 
@@ -264,13 +261,17 @@ namespace GuelfondProj
 
         static async Task<ResultCadastroLaudo> SendLaudoAsync(HttpClient client, CadastraLaudo cadastraLaudo)
         {
-            var content = new StringContent(JsonConvert.SerializeObject(cadastraLaudo), Encoding.UTF8, "application/json");
-            var response = await client.PostAsync("webapi/api/integracoes/laudo/cadastrarLaudo", content);
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "webapi/api/integracoes/laudo/cadastrarLaudo");
+            request.Content = new StringContent(JsonConvert.SerializeObject(cadastraLaudo), Encoding.UTF8, "application/json");
+            var response = await client.SendAsync(request);
+
+
             var result = new ResultCadastroLaudo();
-            result.Descricao = $"resposta: {response.ReasonPhrase} - {((int)response.StatusCode).ToString()} \r\n";
-            
+
+
             if (response.IsSuccessStatusCode)
             {
+                result.Descricao = $"resposta: {response.ReasonPhrase} - {((int)response.StatusCode).ToString()} \r\n";
                 var data = await response.Content.ReadAsStringAsync();
                 result = JsonConvert.DeserializeObject<ResultCadastroLaudo>(data);
             }
@@ -282,15 +283,17 @@ namespace GuelfondProj
         {
 
             //StringContent content = new StringContent(JsonConvert.SerializeObject(token), Encoding.UTF8, "application/json");
-            var  content = new StringContent(token, Encoding.UTF8, "text/plain");
-            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
-            var response = await client.PostAsync("webapi/token", content);
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "webapi/token");
+            request.Content = new StringContent(token, Encoding.UTF8, "application/x-www-form-urlencoded");
+            var response = await client.SendAsync(request);
+            //response.EnsureSuccessStatusCode();
+
             var result = new Token();
-            result.token_type = $"resposta: {response.ReasonPhrase} - {((int)response.StatusCode).ToString()} \r\n";
-            
+
+
             if (response.IsSuccessStatusCode)
             {
+                result.token_type = $"resposta: {response.ReasonPhrase} - {((int)response.StatusCode).ToString()} \r\n";
                 //var data = (Newtonsoft.Json.Linq.JArray)await response.Content.ReadAsAsync<object>();
                 //var teste = data.ToObject<string[]>();
                 //msg = teste[0];
@@ -299,6 +302,46 @@ namespace GuelfondProj
 
             }
             return result;
+        }
+
+        public static string PlainTextToRtf(string plainText)
+        {
+            if (string.IsNullOrEmpty(plainText))
+                return "";
+
+            string escapedPlainText = plainText.Replace(@"\", @"\\").Replace("{", @"\{").Replace("}", @"\}");
+            escapedPlainText = EncodeCharacters(escapedPlainText);
+
+            string rtf = @"{\rtf1\ansi\ansicpg1250\deff0{\fonttbl\f0\fswiss Helvetica;}\f0\pard ";
+            rtf += escapedPlainText.Replace(Environment.NewLine, "\\par\r\n ");
+            rtf += " }";
+            return rtf;
+        }
+
+        private static string EncodeCharacters(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return "";
+
+            return text
+                .Replace("ą", @"\'b9")
+                .Replace("ć", @"\'e6")
+                .Replace("ę", @"\'ea")
+                .Replace("ł", @"\'b3")
+                .Replace("ń", @"\'f1")
+                .Replace("ó", @"\'f3")
+                .Replace("ś", @"\'9c")
+                .Replace("ź", @"\'9f")
+                .Replace("ż", @"\'bf")
+                .Replace("Ą", @"\'a5")
+                .Replace("Ć", @"\'c6")
+                .Replace("Ę", @"\'ca")
+                .Replace("Ł", @"\'a3")
+                .Replace("Ń", @"\'d1")
+                .Replace("Ó", @"\'d3")
+                .Replace("Ś", @"\'8c")
+                .Replace("Ź", @"\'8f")
+                .Replace("Ż", @"\'af");
         }
     }
     [Serializable]
