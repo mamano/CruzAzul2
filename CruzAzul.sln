@@ -17,7 +17,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GuelfondProj", "GuelfondPro
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp2", "ConsoleApp2\ConsoleApp2.csproj", "{C3779E36-5E81-469A-AB29-882CA1136DC5}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IHostedServiceAsAService", "..\IHostedServiceAsAService\IHostedServiceAsAService\IHostedServiceAsAService.csproj", "{FA30630E-1477-48FC-89EF-9C263D7809B3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IHostedServiceAsAService", "IHostedServiceAsAService\IHostedServiceAsAService\IHostedServiceAsAService.csproj", "{FA30630E-1477-48FC-89EF-9C263D7809B3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
