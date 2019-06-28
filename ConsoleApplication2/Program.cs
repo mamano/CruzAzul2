@@ -1,28 +1,29 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Oracle.ManagedDataAccess.Client;
-using Oracle.ManagedDataAccess.Types;
+using System.Data;
+using System.Data.OracleClient;
 
 namespace ConsoleApplication2
 {
     class Program
     {
+        [Obsolete]
         static void Main(string[] args)
         {
 
-            string conn = "DATA SOURCE=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=192.168.0.11)(PORT=1521)))(CONNECT_DATA=(SERVICE_NAME=spectra)));User ID=spectra;Password=artceps";
+            string conn = "DATA SOURCE=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=172.17.150.2)(PORT=1521)))(CONNECT_DATA=(SERVICE_NAME=spectra)));User ID=spectra;Password=artceps";
 
 
             using (OracleConnection connection = new OracleConnection(conn))
             {
-                OracleCommand command = new OracleCommand("SELECT * FROM study WHERE ROWNUM < 10", connection);
                 connection.Open();
-                connection.BeginTransaction();
+                OracleCommand command = new OracleCommand("SELECT * FROM study WHERE ROWNUM < 10", connection);
+                OracleTransaction transaction;
+
+                // Start a local transaction
+                transaction = connection.BeginTransaction(IsolationLevel.ReadCommitted);
+                command.Transaction = transaction;
+
+               
                 OracleDataReader dr = command.ExecuteReader();
                 while (dr.Read())
                 {
@@ -32,8 +33,9 @@ namespace ConsoleApplication2
                     {
                         fs.Write(byteArray, 0, byteArray.Length);
                     }*/
-                    Console.WriteLine(dr["PATIENTID"]);
+                    Console.WriteLine(dr["PATIENT_ID"]);
                 }
+                transaction.Commit();
             }
         }
     }

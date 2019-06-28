@@ -6,6 +6,7 @@ namespace GuelfondProj
 {
     public partial class Startup
     {
+        [System.Obsolete]
         public void Configuration(IAppBuilder app)
         {
             ConfigureAuth(app);
