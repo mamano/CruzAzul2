@@ -41,7 +41,7 @@ namespace GuelfondProj
             
 
                 RecurringJob.AddOrUpdate("run", () => Run(), "* * * * *");  
-                RecurringJob.AddOrUpdate("delete", () => Delete(), "0 0 */10 * *");
+                RecurringJob.AddOrUpdate("delete", () => Delete(), "0 0 */20 * *");
 
 
                 app.UseHangfireDashboard();
@@ -58,50 +58,27 @@ namespace GuelfondProj
 
                 using (OracleConnection connection = new OracleConnection(conn))
                 {
-                    OracleCommand command = new OracleCommand("SELECT * FROM MOVEREPORT WHERE STATUS = 1 AND ROWNUM < 10", connection);
                     connection.Open();
-                    connection.BeginTransaction();
-
+                    OracleCommand command = new OracleCommand("delete from movereport where approval_dttm <=  (SELECT SYSDATE -30   from dual) and status = 1", connection);
+                    
+                    var transaction = connection.BeginTransaction();
+                    //var sourceFilePath = sourcePath + "\\" + dr["PATHNAME"].ToString() + "\\" + dr["FILENAME"].ToString();
+                    command.Transaction = transaction;
                     try
                     {
-                        var da = new OracleDataAdapter(command);
-                        var cb = new OracleCommandBuilder(da);
-                        var ds = new DataSet();
-                        da.Fill(ds);
-                        
-                        //var sourcePath = ConfigurationManager.AppSettings["SourcePathPDF"];
-                        foreach (DataRow dr in ds.Tables[0].Rows)
-                        {
-
-                            //var sourceFilePath = sourcePath + "\\" + dr["PATHNAME"].ToString() + "\\" + dr["FILENAME"].ToString();
-                            try
-                            {
-                                /*FileInfo f1 = new FileInfo(sourceFilePath);
-                                f1.Delete();
-                                Directory.Delete(sourcePath + "\\" + dr["PATHNAME"].ToString());*/
-                                command = new OracleCommand("DELETE FROM MOVEREPORT WHERE STUDY_KEY = '{STUDY_KEY}'", connection);
-                                command.ExecuteNonQuery();
-                                command.Transaction.Commit();
-                            }
-                            catch (Exception ex)
-                            {
-                                command.Transaction.Rollback();
-                                connection.Close();
-                                throw new Exception($" error: {ex}");
-                            }
-                            finally
-                            {
-                                connection.Close();
-                            }
-                        }
+                        command.ExecuteNonQuery();
+                        transaction.Commit();
                     }
                     catch (Exception ex)
                     {
-                        throw ex;
+                        transaction.Rollback();
+                        connection.Close();
+                        error = $" error: {ex}";
                     }
                     finally
                     {
                         connection.Close();
+                        error = $"Sucesso";
                     }
                 }
             }
