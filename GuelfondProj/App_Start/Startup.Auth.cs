@@ -1,17 +1,22 @@
 ﻿using System;
 using Hangfire;
 using Hangfire.SQLite;
+using System.Web;
+using System.Diagnostics;
 using System.Configuration;
+using Oracle.ManagedDataAccess.Client;
+using System.Data;
+using System.IO;
 using Owin;
 using System.Net.Http;
 using Newtonsoft.Json;
+using Oracle.ManagedDataAccess.Types;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Web.Mvc;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Data;
-using System.Data.OracleClient;
-using Oracle.ManagedDataAccess.Types;
 
 namespace GuelfondProj
 {
@@ -19,9 +24,7 @@ namespace GuelfondProj
     {
         private const string V = "0";
         private static string error = string.Empty;
-
         // For more information on configuring authentication, please visit http://go.microsoft.com/fwlink/?LinkId=301864
-        [Obsolete]
         public void ConfigureAuth(IAppBuilder app)
         {
                 var name = String.Format("{0}.{1}",
@@ -45,7 +48,6 @@ namespace GuelfondProj
                 app.UseHangfireServer(option);
         }
 
-        [Obsolete]
         public string Delete()
         {
             var error = string.Empty;
@@ -56,10 +58,9 @@ namespace GuelfondProj
 
                 using (OracleConnection connection = new OracleConnection(conn))
                 {
-                    connection.Open();
                     OracleCommand command = new OracleCommand("SELECT * FROM MOVEREPORT WHERE STATUS = 1 AND ROWNUM < 10", connection);
-                    OracleTransaction transaction;
-                    transaction = connection.BeginTransaction();
+                    connection.Open();
+                    connection.BeginTransaction();
 
                     try
                     {
@@ -79,31 +80,27 @@ namespace GuelfondProj
                                 f1.Delete();
                                 Directory.Delete(sourcePath + "\\" + dr["PATHNAME"].ToString());*/
                                 command = new OracleCommand("DELETE FROM MOVEREPORT WHERE STUDY_KEY = '{STUDY_KEY}'", connection);
-                                command.Transaction = transaction;
                                 command.ExecuteNonQuery();
+                                command.Transaction.Commit();
                             }
                             catch (Exception ex)
                             {
-                                transaction.Rollback();
+                                command.Transaction.Rollback();
                                 connection.Close();
                                 throw new Exception($" error: {ex}");
                             }
                             finally
                             {
-                                
                                 connection.Close();
                             }
                         }
                     }
                     catch (Exception ex)
                     {
-                        transaction.Rollback();
-                        connection.Close();
                         throw ex;
                     }
                     finally
                     {
-                        transaction.Commit();
                         connection.Close();
                     }
                 }
@@ -116,7 +113,6 @@ namespace GuelfondProj
             return error;
         }
 
-        [Obsolete]
         public string Run()
         {
             error = string.Empty;
@@ -125,16 +121,16 @@ namespace GuelfondProj
             {
 
                 string conn = ConfigurationManager.ConnectionStrings["DefaultConnection"].ConnectionString;
-               
+                
                 using (OracleConnection connection = new OracleConnection(conn))
                 {
                     connection.Open();
                     OracleCommand command = new OracleCommand(@"SELECT report.*, study.PATIENT_NAME, TO_CHAR(study.CREATION_DTTM, 'YYYY-MM-DD hh24:mi:ss')  CREATION_DTTM  FROM MOVEREPORT report
                                                                 inner join study
                                                                 on report.study_key = study.study_key WHERE STATUS = 0 and ROWNUM < 10", connection);
-                    OracleTransaction transaction;
-                    transaction = connection.BeginTransaction();
-                    command.Transaction = transaction;
+                    
+                    var transaction = connection.BeginTransaction();
+
                     try
                     {
                         /*var da = new OracleDataAdapter(command);
@@ -142,13 +138,14 @@ namespace GuelfondProj
                         var ds = new DataSet();
                         da.Fill(ds);*/
                         OracleDataReader reader;
+                        command.Transaction = transaction;
                         reader = command.ExecuteReader();
-                        
 
+                        
                         while (reader.Read())
                         {
 
-                            OracleLob clob = reader.GetOracleLob(2);
+                            OracleClob clob = reader.GetOracleClob(2);
                             var cellValue = (string)clob.Value;
                             
 
@@ -160,26 +157,29 @@ namespace GuelfondProj
                             var CRM = reader["CRM"].ToString();
                             var regex = new Regex(@"[^\d]");
                             CRM = regex.Replace(CRM, "");
-
-                           
-
-                            RunAsync(ACCESSNUMBER, STUDY_KEY, report, patient_name, creation_data, command, connection, CRM, transaction).Wait();
-                            //====== [Conclusion] ======
-
-
+                            using (OracleConnection connection1 = new OracleConnection(conn))
+                            {
+                                connection1.Open();
+                                var transaction1 = connection1.BeginTransaction();
+                                RunAsync(ACCESSNUMBER, STUDY_KEY, report, patient_name, creation_data, null, connection1, CRM, transaction1).Wait();
+                                //====== [Conclusion] ======
+                            }
                         }
                     }
                     catch(Exception ex)
-                    {
-                        transaction.Rollback();
+                    {   
                         error += $" error {{ studykey: {STUDY_KEY}, ex: {ex} }}";
-                        command = new OracleCommand($"UPDATE MOVEREPORT SET STATUS = 1, ERROR = '{error}' WHERE STUDY_KEY = '{STUDY_KEY}'", connection);
+                        command.Connection = connection;
+                        command.CommandText = $"UPDATE MOVEREPORT SET STATUS = 1, ERROR = :clobparam WHERE STUDY_KEY = '{STUDY_KEY}'";
+                        OracleParameter clobparam = new OracleParameter("clobparam", OracleDbType.Clob, error.Length);
+                        clobparam.Direction = ParameterDirection.Input;
+                        clobparam.Value = error;
+                        command.Parameters.Add(clobparam);
                         command.Transaction = transaction;
                         command.ExecuteNonQuery();
                     }
                     finally
                     {
-                        transaction.Commit();
                         connection.Close();
                     }
                 }
@@ -192,7 +192,6 @@ namespace GuelfondProj
             return error;
         }
 
-        [Obsolete]
         static async Task RunAsync(string ACCESSNUMBER, string STUDY_KEY, string report, string patient_name, string creation_data, OracleCommand command, OracleConnection connection, string CRM, OracleTransaction transaction)
         {
             var client = new HttpClient();
@@ -202,8 +201,7 @@ namespace GuelfondProj
             client.DefaultRequestHeaders.Accept.Clear();
             error += $"Start: {STUDY_KEY} \r\n";
             var teste = default(string);
-
-            OracleCommand command2;
+            command = new OracleCommand();
             try
             {
                 /*Token token = new Token {
@@ -249,10 +247,17 @@ namespace GuelfondProj
                 var ret = await SendLaudoAsync(client, cadastroLaudo);
                 error += $"retorno laudo: {JsonConvert.SerializeObject(ret)}";
                 teste += $"retorno laudo: {JsonConvert.SerializeObject(ret)}";
-                command2 = new OracleCommand($"UPDATE MOVEREPORT SET STATUS = 1, ERROR = '{teste}' WHERE STUDY_KEY = '{STUDY_KEY}'", connection);
 
-                command2.Transaction = transaction;
-                command2.ExecuteNonQuery();
+                command = new OracleCommand();
+                command.Connection = connection;
+                command.CommandText = $"UPDATE MOVEREPORT SET STATUS = 1, ERROR = :clobparam WHERE STUDY_KEY = '{STUDY_KEY}'";
+                OracleParameter clobparam = new OracleParameter("clobparam", OracleDbType.Clob, teste.Length);
+                clobparam.Direction = ParameterDirection.Input;
+                clobparam.Value = teste;
+                command.Parameters.Add(clobparam);
+                command.Transaction = transaction;
+                command.ExecuteNonQuery();
+                transaction.Commit();
                 //command.Transaction.Commit();
 
                 /*if(ret.Descricao.Contains("Requisição não encontrada"))
@@ -264,12 +269,22 @@ namespace GuelfondProj
             }
             catch (Exception e)
             {
-                teste += $" laudo: {teste} exception: {e} \r\n ";
-                
-
-                command2 = new OracleCommand($"UPDATE MOVEREPORT SET STATUS = 1, ERROR = '{teste}' WHERE STUDY_KEY = '{STUDY_KEY}'", connection);
-                command2.Transaction = transaction;
-                command2.ExecuteNonQuery();
+                transaction.Rollback();
+                teste = $" laudo: {teste} exception: {e} \r\n ";
+                command = new OracleCommand();
+                command.Connection = connection;
+                command.CommandText = $"UPDATE MOVEREPORT SET STATUS = 1, ERROR = :clobparam WHERE STUDY_KEY = '{STUDY_KEY}'";
+                OracleParameter clobparam = new OracleParameter("clobparam", OracleDbType.Clob, teste.Length);
+                clobparam.Direction = ParameterDirection.Input;
+                clobparam.Value = teste;
+                command.Parameters.Add(clobparam);
+                command.Transaction = transaction;
+                command.ExecuteNonQuery();
+                transaction.Commit();
+            }
+            finally
+            {
+                connection.Close();
             }
             error += "End \r\n";
         }
