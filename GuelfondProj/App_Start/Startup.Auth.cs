@@ -276,11 +276,13 @@ namespace GuelfondProj
             var result = new ResultCadastroLaudo();
 
 
-            if (response.IsSuccessStatusCode)
+
+            result.Descricao = $"resposta: {response.ReasonPhrase} - {((int)response.StatusCode).ToString()} \r\n";
+            if (response != null)
             {
-                result.Descricao = $"resposta: {response.ReasonPhrase} - {((int)response.StatusCode).ToString()} \r\n";
                 var data = await response.Content.ReadAsStringAsync();
-                result = JsonConvert.DeserializeObject<ResultCadastroLaudo>(data);
+                if (!string.IsNullOrEmpty(data))
+                    result = JsonConvert.DeserializeObject<ResultCadastroLaudo>(data);
             }
             // return URI of the created resource.
             return result;
@@ -298,16 +300,19 @@ namespace GuelfondProj
             var result = new Token();
 
 
-            if (response.IsSuccessStatusCode)
-            {
-                result.token_type = $"resposta: {response.ReasonPhrase} - {((int)response.StatusCode).ToString()} \r\n";
-                //var data = (Newtonsoft.Json.Linq.JArray)await response.Content.ReadAsAsync<object>();
-                //var teste = data.ToObject<string[]>();
-                //msg = teste[0];
-                var data = await response.Content.ReadAsStringAsync();
-                result = JsonConvert.DeserializeObject<Token>(data);
 
+                result.token_type = $"resposta: {response.ReasonPhrase} - {((int)response.StatusCode).ToString()} \r\n";
+            //var data = (Newtonsoft.Json.Linq.JArray)await response.Content.ReadAsAsync<object>();
+            //var teste = data.ToObject<string[]>();
+            //msg = teste[0];
+            if (response != null)
+            {
+                var data = await response.Content.ReadAsStringAsync();
+                if (!string.IsNullOrEmpty(data))
+                    result = JsonConvert.DeserializeObject<Token>(data);
             }
+
+            
             return result;
         }
 
