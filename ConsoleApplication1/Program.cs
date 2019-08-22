@@ -85,7 +85,7 @@ namespace ConsoleApplication1
         }
         private static void timer1_Tick()
         {
-            string path = @"C:\Temp2";
+            string path = @"C:\Temp";
             
             Dictionary<string, string> dic = new Dictionary<string, string>();
             
@@ -99,10 +99,13 @@ namespace ConsoleApplication1
                 foreach (string fileName in fileEntries)
                 {
                     
-                    using (XmlSanitizingStream fileSteam = new XmlSanitizingStream(fileName, Encoding.UTF8))
+                     //lê o texto do arquivo e salva na variavel xmlText
+                  
+                    //using (XmlSanitizingStream fileSteam = new XmlSanitizingStream(fileName, Encoding.UTF8))
+                    using (StreamReader sr = File.OpenText(fileName))
                     {
-                        XmlReaderSettings settings;
-                        
+                        /*XmlReaderSettings settings;
+
                         settings = new XmlReaderSettings();
                         settings.ConformanceLevel = ConformanceLevel.Document;
 
@@ -110,7 +113,13 @@ namespace ConsoleApplication1
                         XmlDocument document = new XmlDocument();
                         //
                         var xml = fileSteam.ReadToEnd();
-                        document.Load(reader);
+                        document.Load(reader);*/
+
+                        var xmlText = sr.ReadToEnd();
+                        xmlText = xmlText.Replace("\0", string.Empty); // retira os caracteres nulos;
+                        var document = new XmlDocument(); // cria o xml
+                        document.LoadXml(xmlText);
+
                         string dttm = GetString(document.SelectNodes("/MWL_ITEM/DATE")[0]) +
                                        GetString(document.SelectNodes("/MWL_ITEM/TIME")[0]);
                         query = string.Format(command, dttm,
@@ -138,7 +147,7 @@ namespace ConsoleApplication1
                         try
                         {
 
-                            string constr = "DATA SOURCE=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521)))(CONNECT_DATA=(SERVICE_NAME=XE)));User ID=system;Password=noturno";
+                            /*string constr = "DATA SOURCE=(DESCRIPTION=(ADDRESS_LIST=(ADDRESS=(PROTOCOL=TCP)(HOST=localhost)(PORT=1521)))(CONNECT_DATA=(SERVICE_NAME=XE)));User ID=system;Password=noturno";
 
                             OracleConnection connection2 = new OracleConnection();
                             using (OracleConnection connection = new OracleConnection(constr))
@@ -164,7 +173,7 @@ namespace ConsoleApplication1
                                     reader.Close();
                                     connection.Close();
                                 }
-                            }
+                            }*/
                         }
                         catch (Exception ex)
                         {
@@ -173,10 +182,10 @@ namespace ConsoleApplication1
                     }
                 }
 
-                foreach (KeyValuePair<string, string> entry in dic)
+                /*foreach (KeyValuePair<string, string> entry in dic)
                 {
                     File.Delete(entry.Value);
-                }
+                }*/
             }
         }
 

@@ -151,7 +151,12 @@ namespace CruzAzul
                 foreach (string fileName in fileEntries)
                 {
                     WriteLog("Nome do arquivo: " + fileName);
-                    using (FileStream fileSteam = File.OpenRead(fileName))
+                    if(fileName.StartsWith("del"))
+                    {
+                        continue;  
+                    }
+                    //using (FileStream fileSteam = File.OpenRead(fileName))
+                    using (StreamReader sr = File.OpenText(fileName))
                     {
                         XmlReaderSettings settings;
                         settings = new XmlReaderSettings();
@@ -159,11 +164,16 @@ namespace CruzAzul
                         try
                         {
 
-  
-                            XmlReader reader = XmlReader.Create(fileSteam, settings);
+
+                            /*XmlReader reader = XmlReader.Create(fileSteam, settings);
                             XmlDocument document = new XmlDocument();
 
-                            document.Load(reader);
+                            document.Load(reader);*/
+
+                            var xmlText = sr.ReadToEnd();
+                            xmlText = xmlText.Replace("\0", string.Empty); // retira os caracteres nulos;
+                            var document = new XmlDocument(); // cria o xml
+                            document.LoadXml(xmlText);
                             string dttm = GetString(document.SelectNodes("/MWL_ITEM/DATE")[0]) +
                                           GetString(document.SelectNodes("/MWL_ITEM/TIME")[0]);
                             query = string.Format(command, dttm,
@@ -176,7 +186,7 @@ namespace CruzAzul
                                                            GetString(document.SelectNodes("/MWL_ITEM/ACCESSION_NUMBER")[0]),
                                                            GetString(document.SelectNodes("/MWL_ITEM/REFERRING_PHYSICIAN_IDENTIFICATION")[0], 0, "RD"),
                                                            GetString(document.SelectNodes("/MWL_ITEM/PATIENT_ID")[0]),
-                                                           GetString(document.SelectNodes("/MWL_ITEM/PATIENT_NAME")[0]),
+                                                           GetString(document.SelectNodes("/MWL_ITEM/PATIENT_NAME")[0]).Replace("'", ""),
                                                            GetString(document.SelectNodes("/MWL_ITEM/PATIENT_SEX")[0]),
                                                            GetString(document.SelectNodes("/MWL_ITEM/PATIENT_BIRTHDATE")[0]),
                                                            GetString(document.SelectNodes("/MWL_ITEM/PATIENT_LOCATION")[0]),
@@ -184,7 +194,7 @@ namespace CruzAzul
                                                            "CruzAzul",
                                                            GetString(document.SelectNodes("/MWL_ITEM/ACCESSION_NUMBER")[0]),
                                                            GetString(document.SelectNodes("/MWL_ITEM/SCHEDULED_STATION_AE_TITLE")[0]),
-                                                           GetString(document.SelectNodes("/MWL_ITEM/SCHEDULED_PERFORMING_PHYSICIAN")[0], 30),
+                                                           GetString(document.SelectNodes("/MWL_ITEM/SCHEDULED_PERFORMING_PHYSICIAN")[0], 28),
                                                            GetString(document.SelectNodes("/MWL_ITEM/REQUESTED_PROCEDURE_DESCRIPTION")[0]),
                                                            GetString(document.SelectNodes("/MWL_ITEM/ACCESSION_NUMBER")[0]),
                                                            GetString(document.SelectNodes("/MWL_ITEM/REFERRING_PHYSICIAN_IDENTIFICATION")[0]));
@@ -207,12 +217,12 @@ namespace CruzAzul
                                 catch (OracleException ex)
                                 {
                                     command.Transaction.Rollback();
-                                    WriteLog("Erro " + DateTime.Now.ToString() + ": " + ex.Message + "\r\n" + ex.StackTrace + "\r\n" + ex.InnerException);
+                                    WriteLog("Erro " + DateTime.Now.ToString() + ": " + ex.Message + "\r\n" + ex.StackTrace + "\r\n" + ex.InnerException + "\r\n Query: " + query);
                                 }
                                 finally
                                 {   
                                     // always call Close when done reading.
-                                    reader.Close();
+                                    sr.Close();
                                     connection.Close();
                                 }
                             }

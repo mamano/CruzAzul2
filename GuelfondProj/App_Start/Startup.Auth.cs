@@ -59,7 +59,7 @@ namespace GuelfondProj
                 using (OracleConnection connection = new OracleConnection(conn))
                 {
                     connection.Open();
-                    OracleCommand command = new OracleCommand("delete from movereport where approval_dttm <=  (SELECT SYSDATE -30   from dual) and status = 1", connection);
+                    OracleCommand command = new OracleCommand("delete from movereport where approval_dttm <=  (SELECT SYSDATE -10   from dual) and status = 1", connection);
                     
                     var transaction = connection.BeginTransaction();
                     //var sourceFilePath = sourcePath + "\\" + dr["PATHNAME"].ToString() + "\\" + dr["FILENAME"].ToString();
@@ -90,6 +90,7 @@ namespace GuelfondProj
             return error;
         }
 
+        [DisableConcurrentExecution(timeoutInSeconds: 0)]
         public string Run()
         {
             error = string.Empty;
@@ -104,7 +105,7 @@ namespace GuelfondProj
                     connection.Open();
                     OracleCommand command = new OracleCommand(@"SELECT report.*, study.PATIENT_NAME, TO_CHAR(study.CREATION_DTTM, 'YYYY-MM-DD hh24:mi:ss')  CREATION_DTTM  FROM MOVEREPORT report
                                                                 inner join study
-                                                                on report.study_key = study.study_key WHERE STATUS = 0 and ROWNUM < 10", connection);
+                                                                on report.study_key = study.study_key WHERE STATUS = 0 and ROWNUM < 500", connection);
                     
                     var transaction = connection.BeginTransaction();
 
