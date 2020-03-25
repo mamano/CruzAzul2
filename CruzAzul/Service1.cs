@@ -153,7 +153,8 @@ namespace CruzAzul
                     WriteLog("Nome do arquivo: " + fileName);
                     if(fileName.StartsWith("del"))
                     {
-                        continue;  
+                        File.Move(path + fileName, path + "\\NÃO PROCESSADOS\\" + fileName);
+                        goto CONTINUE;
                     }
                     //using (FileStream fileSteam = File.OpenRead(fileName))
                     using (StreamReader sr = File.OpenText(fileName))
@@ -194,7 +195,7 @@ namespace CruzAzul
                                                            "CruzAzul",
                                                            GetString(document.SelectNodes("/MWL_ITEM/ACCESSION_NUMBER")[0]),
                                                            GetString(document.SelectNodes("/MWL_ITEM/SCHEDULED_STATION_AE_TITLE")[0]),
-                                                           GetString(document.SelectNodes("/MWL_ITEM/SCHEDULED_PERFORMING_PHYSICIAN")[0], 28),
+                                                           GetString(document.SelectNodes("/MWL_ITEM/SCHEDULED_PERFORMING_PHYSICIAN")[0], 28).Replace("'", ""),
                                                            GetString(document.SelectNodes("/MWL_ITEM/REQUESTED_PROCEDURE_DESCRIPTION")[0]),
                                                            GetString(document.SelectNodes("/MWL_ITEM/ACCESSION_NUMBER")[0]),
                                                            GetString(document.SelectNodes("/MWL_ITEM/REFERRING_PHYSICIAN_IDENTIFICATION")[0]));
@@ -232,6 +233,7 @@ namespace CruzAzul
                             WriteLog("Erro " + DateTime.Now.ToString() + ": " + ex.Message + "\r\n" + ex.StackTrace + "\r\n" + ex.InnerException);
                         }
                     }
+                    CONTINUE:;
                 }
 
                 foreach (KeyValuePair<string, string> entry in dic)

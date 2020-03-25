@@ -105,7 +105,7 @@ namespace GuelfondProj
                     connection.Open();
                     OracleCommand command = new OracleCommand(@"SELECT report.*, study.PATIENT_NAME, TO_CHAR(study.CREATION_DTTM, 'YYYY-MM-DD hh24:mi:ss')  CREATION_DTTM  FROM MOVEREPORT report
                                                                 inner join study
-                                                                on report.study_key = study.study_key WHERE STATUS = 0 and ROWNUM < 500", connection);
+                                                                on report.study_key = study.study_key WHERE STATUS = 0 and ROWNUM < 500 AND SOURCE_AETITLE not IN ('DSVR5','DSVR9')", connection);
                     
                     var transaction = connection.BeginTransaction();
 
@@ -126,7 +126,6 @@ namespace GuelfondProj
                             OracleClob clob = reader.GetOracleClob(2);
                             var cellValue = (string)clob.Value;
                             
-
                             var ACCESSNUMBER = reader["ACCESSNUMBER"].ToString();
                             STUDY_KEY = reader["STUDY_KEY"].ToString();
                             var report = reader["REPORT_TEXT_LOB"].ToString().Replace("====== [Conclusion] ======", "");
@@ -162,7 +161,7 @@ namespace GuelfondProj
                     }
                 }
             }
-            catch (Exception ex)
+            catch 
             {
                 return error;
             }

@@ -156,12 +156,17 @@ namespace IHostedServiceAsAService
             var patientId = request.Dataset.GetString(DicomTag.PatientID);
             var seriesNumber = request.Dataset.GetString(DicomTag.InstanceNumber);
             var studyDate = request.Dataset.GetString(DicomTag.StudyDate);
+            var sOPInstanceUID = request.Dataset.GetString(DicomTag.SOPInstanceUID);
             var instUid = $"1.2.840.113619.2.81.290.{studyDate}.{patientId}";
             request.Dataset.Remove(DicomTag.StudyInstanceUID);
             request.Dataset.AddOrUpdate(DicomTag.StudyInstanceUID, instUid);
+            var instUidAux = $"1.2.840.113619.2.81.290.{studyDate}.{patientId}";
             request.Dataset.Remove(DicomTag.SeriesInstanceUID);
-            request.Dataset.AddOrUpdate(DicomTag.SeriesInstanceUID, instUid + $".{seriesNumber}");
+            request.Dataset.AddOrUpdate(DicomTag.SeriesInstanceUID, instUidAux + $".{seriesNumber}");
             //var path = Path.GetFullPath(@".\DICOM");
+            request.Dataset.Remove(DicomTag.SOPInstanceUID);
+            request.Dataset.AddOrUpdate(DicomTag.SOPInstanceUID, sOPInstanceUID + $".{patientId}");
+
             var path = "C:\\INFINITT\\Spool";
             path = Path.Combine(path, instUid + $".{seriesNumber}" + ".dcm");
 
