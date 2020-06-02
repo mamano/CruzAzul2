@@ -1,4 +1,9 @@
-﻿using Topshelf;
+﻿using log4net;
+using log4net.Config;
+using System.Configuration;
+using System.IO;
+using System.Reflection;
+using Topshelf;
 
 namespace NewServiceCruzAzul
 {
@@ -6,6 +11,9 @@ namespace NewServiceCruzAzul
     {
         internal static void Configure()
         {
+            var repository = LogManager.GetRepository(Assembly.GetCallingAssembly());
+            var file = new FileInfo(ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None).FilePath);
+            XmlConfigurator.Configure(repository, file);
             HostFactory.Run(configure =>
             {
                 configure.Service<CruzAzulService>(service =>

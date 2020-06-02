@@ -1,19 +1,24 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Configuration;
-using System.Xml;
 using System.Xml.Linq;
 using System.Linq;
+using log4net;
+using LogManager = log4net.LogManager;
+using Oracle.ManagedDataAccess.Client;
+using System.Xml;
+using System.Text;
 
 namespace NewServiceCruzAzul
 {
     public class CruzAzulService : System.ServiceProcess.ServiceBase
     {
+
+        private static ILog Log =
+             LogManager.GetLogger(typeof(CruzAzulService));
         FileSystemWatcher watcher;
         private string path;
-        private string command = @"INSERT INTO MWLWL(MWL_KEY,
+        private readonly string command = @"INSERT INTO MWLWL(MWL_KEY,
                                                      REPLICA_DTTM,
                                                      SCHEDULED_AETITLE,
                                                      CHARACTER_SET,
@@ -41,7 +46,7 @@ namespace NewServiceCruzAzul
                                                      SCHEDULED_ACTION_CODES,
                                                      REQUEST_DOCTOR) 
                                                     VALUES 
-                                                    (SPECTRA.SQ_MWLWL.NEXTVAL, 
+                                                    (SQ_MWLWL.NEXTVAL, 
                                                     'ANY',
                                                     'ANY',
                                                     'ISO_IR 100',
@@ -71,98 +76,165 @@ namespace NewServiceCruzAzul
 
         public void Start()
         {
-            WriteLog("Servico Iniciado: " + DateTime.Now.ToString());
+            Log.Info("Servico Iniciado: " + DateTime.Now.ToString());
             path = ConfigurationManager.AppSettings["Location"];
-            watch();
+            Watch();
             // write code here that runs when the Windows Service starts up.  
         }
-        public void Stop()
+        public new void Stop()
         {
-            WriteLog("Servico Parado: " + DateTime.Now.ToString());
+            Log.Info("Servico Parado: " + DateTime.Now.ToString());
             // write code here that runs when the Windows Service stops.  
         }
 
-        private void watch()
+        private void Watch()
         {
-            watcher = new FileSystemWatcher();
-            watcher.Path = path;
-            watcher.NotifyFilter = NotifyFilters.LastAccess | NotifyFilters.LastWrite
-                                   | NotifyFilters.FileName | NotifyFilters.DirectoryName;
-            watcher.Filter = "*.xml";
-            watcher.Changed += new FileSystemEventHandler(OnChanged);
+            watcher = new FileSystemWatcher
+            {
+                Path = path,
+                NotifyFilter = NotifyFilters.LastAccess | NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName,
+                Filter = "*.xml",
+                EnableRaisingEvents = true,
+                IncludeSubdirectories = false
+            };
+            //watcher.Changed += new FileSystemEventHandler(OnChanged);
             watcher.Created += new FileSystemEventHandler(OnChanged);
-            
-            watcher.EnableRaisingEvents = true;
         }
 
         private void OnChanged(object source, FileSystemEventArgs e)
         {
+            Process(e.Name, e.FullPath);
+        }
+
+        private void Process(string Name, string FullPath)
+        { 
+            var pathNotProcess = string.Empty;
+            var pathProcess = string.Empty;
+            Directory.GetAccessControl(path);
             //Copies file to another directory.
-
-            if (e.Name.StartsWith("del"))
+            if (Name.StartsWith("del"))
             {
-                File.Move(e.FullPath, path + "\\NÃO PROCESSADOS\\" + e.Name);
+                pathNotProcess = ConfigurationManager.AppSettings["NotProcess"].ToString();
+                pathNotProcess = Path.Combine(path, pathNotProcess, Name);
+                File.Move(FullPath, pathNotProcess);
+                Log.Info($"Arquivo não processado '{Name}' : DataHora - '{DateTime.Now}'");
             }
             else
             {
-                using (StreamReader sr = File.OpenText(e.Name))
+                try
                 {
-                    XmlReaderSettings settings;
-                    settings = new XmlReaderSettings();
-                    settings.ConformanceLevel = ConformanceLevel.Document;
-
-
-                    try
+                    
+                    var delete = string.Empty;
+                    var move = string.Empty;
+                    using (StreamReader fileStream = new StreamReader(FullPath, Encoding.GetEncoding("iso-8859-1")))
                     {
-                        var xmlText = sr.ReadToEnd();
-                        xmlText = xmlText.Replace("\0", string.Empty); // retira os caracteres nulos;
-                        var document = new XmlDocument(); // cria o xml
+                        XmlReaderSettings settings;
+                        settings = new XmlReaderSettings();
+                        settings.ConformanceLevel = ConformanceLevel.Document;
+                        XDocument data = XDocument.Load(fileStream);
+ 
+                        var conn = ConfigurationManager.ConnectionStrings["ConnectionString"].ToString();
+                        var prefix = ConfigurationManager.AppSettings["Prefix"].ToString();
+                        var institution = ConfigurationManager.AppSettings["Institution"].ToString();
+                        var order = (from field in data.Elements("MWL_ITEM")
+                                     select field).Select(field =>
+                                     {
+                                         var obj = new
+                                         {
+                                             DATE = GetString(field.Element("DATE")),
+                                             TIME = GetString(field.Element("TIME")),
+                                             REQUESTED_PROCEDURE_ID = GetString(field.Element("REQUESTED_PROCEDURE_ID")),
+                                             REQUESTED_PROCEDURE_DESCRIPTION = GetString(field.Element("REQUESTED_PROCEDURE_DESCRIPTION"), maxLength: 54),
+                                             STUDY_INSTANCE_UID = prefix + GetString(field.Element("ACCESSION_NUMBER")),
+                                             ACCESSION_NUMBER = GetString(field.Element("ACCESSION_NUMBER")),
+                                             REFERRING_PHYSICIAN_IDENTIFICATION = GetString(field.Element("REFERRING_PHYSICIAN_IDENTIFICATION")),
+                                             PATIENT_ID = GetString(field.Element("PATIENT_ID")),
+                                             PATIENT_NAME = GetString(field.Element("PATIENT_NAME")),
+                                             PATIENT_SEX = GetString(field.Element("PATIENT_SEX")),
+                                             PATIENT_BIRTHDATE = GetString(field.Element("PATIENT_BIRTHDATE")),
+                                             PATIENT_LOCATION = GetString(field.Element("PATIENT_LOCATION")),
+                                             MODALITY = GetModality(GetString(field.Element("MODALITY"))),
+                                             INSTITUTION = institution,
+                                             SCHEDULED_STATION_AE_TITLE = GetString(field.Element("SCHEDULED_STATION_AE_TITLE")),
+                                             SCHEDULED_PERFORMING_PHYSICIAN = GetString(field.Element("SCHEDULED_PERFORMING_PHYSICIAN"), maxLength: 28)
+                                         };
+                                         return obj;
+                                     }).FirstOrDefault();
+                        var dttm = order.DATE + order.TIME;
+                        var query = string.Format(command, dttm,
+                                                           dttm,
+                                                           order.REQUESTED_PROCEDURE_ID,
+                                                           order.REQUESTED_PROCEDURE_ID,
+                                                           order.REQUESTED_PROCEDURE_DESCRIPTION,
+                                                           order.REQUESTED_PROCEDURE_ID,
+                                                           order.STUDY_INSTANCE_UID,
+                                                           order.ACCESSION_NUMBER,
+                                                           order.REFERRING_PHYSICIAN_IDENTIFICATION,
+                                                           order.PATIENT_ID,
+                                                           order.PATIENT_NAME,
+                                                           order.PATIENT_SEX,
+                                                           order.PATIENT_BIRTHDATE,
+                                                           order.PATIENT_LOCATION,
+                                                           order.MODALITY,
+                                                           order.INSTITUTION,
+                                                           order.ACCESSION_NUMBER,
+                                                           order.SCHEDULED_STATION_AE_TITLE,
+                                                           order.SCHEDULED_PERFORMING_PHYSICIAN,
+                                                           order.REQUESTED_PROCEDURE_DESCRIPTION,
+                                                           order.ACCESSION_NUMBER,
+                                                           order.REFERRING_PHYSICIAN_IDENTIFICATION);
 
-
-                        XElement doc = XElement.Parse(xmlText);
-                        var result = doc.Elements("MWL_ITEM")
-                                        .Select(x => x)
-                                        .ToList();
-                        File.Delete(e.Name);
+                        using (OracleConnection connection = new OracleConnection(conn))
+                        {
+                            OracleCommand command = new OracleCommand(query, connection);
+                            connection.Open();
+                            connection.BeginTransaction();
+                            try
+                            {
+                                command.ExecuteNonQuery();
+                                command.Transaction.Commit();
+                                
+                                Log.Info($"Pedido cadastrado com sucesso {DateTime.Now.ToString()} : \r\n {query}");
+                                delete = FullPath;
+                                Log.Info($"Pedido pacienteid - {order.PATIENT_ID}, accessnumber - {order.ACCESSION_NUMBER} ");
+                            }
+                            catch (OracleException ex)
+                            {
+                                command.Transaction.Rollback();
+                                pathNotProcess = ConfigurationManager.AppSettings["NotProcess"].ToString();
+                                pathNotProcess = Path.Combine(path, pathNotProcess, Name);
+                                move = FullPath;
+                                Log.Info($"Erro {DateTime.Now.ToString()} source - {move} dest - {pathNotProcess} : {ex.Message} \r\n {ex.StackTrace} \r\n {ex.InnerException}");
+                                Log.Info($"Query - {query}");
+                            }
+                            finally
+                            {
+                                // always call Close when done reading.
+                                connection.Close();
+                            }
+                        }
+                        
+                        
                     }
-                    catch(Exception ex)
-                    {
-
-                    }
+                    if (!string.IsNullOrEmpty(move))
+                        File.Move(move, pathNotProcess);
+                    if (!string.IsNullOrEmpty(delete))
+                        File.Delete(delete);
+                    
                 }
+                catch (Exception ex)
+                {
+                    Log.Info($"Erro {DateTime.Now.ToString()} : {ex.Message} \r\n {ex.StackTrace} \r\n {ex.InnerException}");
+                }
+
             }
         }
 
-        public void WriteLog(string excpetion)
+        public string GetString(XElement element, int maxLength = 0, string def = "")
         {
-            StreamWriter log;
-            FileStream fileStream = null;
-            DirectoryInfo logDirInfo = null;
-            FileInfo logFileInfo;
-
-            string logFilePath = ConfigurationManager.AppSettings["ErrorLog"].ToString();
-            logFilePath = logFilePath + "Log-" + System.DateTime.Today.ToString("MM-dd-yyyy") + "." + "txt";
-            logFileInfo = new FileInfo(logFilePath);
-            logDirInfo = new DirectoryInfo(logFileInfo.DirectoryName);
-            if (!logDirInfo.Exists) logDirInfo.Create();
-            if (!logFileInfo.Exists)
-            {
-                fileStream = logFileInfo.Create();
-            }
-            else
-            {
-                fileStream = new FileStream(logFilePath, FileMode.Append);
-            }
-            log = new StreamWriter(fileStream);
-            log.WriteLine(excpetion);
-            log.Close();
-        }
-
-        public string GetString(XmlNode node, int maxLength = 0, string def = "")
-        {
-            string column = string.Empty;
-            if (node != null)
-                column = node.InnerText;
+            var column = def;
+            if (element != null && element.Value != string.Empty)
+                column = element.Value;
 
             return column.Truncate(maxLength, def);
         }

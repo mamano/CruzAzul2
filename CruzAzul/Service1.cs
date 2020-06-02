@@ -231,6 +231,7 @@ namespace CruzAzul
                         catch (Exception ex)
                         {
                             WriteLog("Erro " + DateTime.Now.ToString() + ": " + ex.Message + "\r\n" + ex.StackTrace + "\r\n" + ex.InnerException);
+                            File.Move(path + fileName, path + "\\NÃO PROCESSADOS\\" + fileName);
                         }
                     }
                     CONTINUE:;
